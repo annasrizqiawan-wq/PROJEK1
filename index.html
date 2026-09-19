@@ -60,16 +60,6 @@
         background-color: rgba(99, 102, 241, 0.05);
       }
 
-      .avatar-animation {
-        animation: pulse 1.5s ease-in-out;
-      }
-
-      @keyframes pulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.05); opacity: 0.9; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-
       .btn {
         transition: all 0.3s ease;
       }
@@ -128,7 +118,6 @@
       </div>
     </header>
 
-    <!-- LOGIN SCREEN -->
     <section id="login-view" class="flex-grow flex items-center justify-center px-4 py-8">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-gray-100">
         <div class="text-center mb-6">
@@ -204,7 +193,6 @@
       </div>
     </section>
 
-    <!-- ADMIN DASHBOARD -->
     <main id="admin-view" class="container mx-auto px-4 md:px-8 py-6 hidden flex-grow">
       <!-- Summary Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -289,8 +277,8 @@
               </div>
             </div>
 
-            <div class="flex mb-4 border-b text-sm flex-wrap" id="student-list-tabs">
-              <button class="tab active px-4 py-2 text-gray-600" data-filter="all">Semua (19)</button>
+            <div class="flex mb-4 border-b text-sm flex-wrap gap-1" id="student-list-tabs">
+              <!-- Filter tabs populated by JS -->
             </div>
 
             <div class="overflow-y-auto max-h-[500px] pr-2 space-y-3" id="student-list">
@@ -501,6 +489,35 @@
     </main>
 
     <!-- Photo Upload Modal -->
+    <div id="photo-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 id="modal-title" class="text-lg font-bold text-gray-800">Unggah Foto</h3>
+          <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex flex-col items-center gap-4">
+          <div id="photo-preview" class="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-inner">
+            <!-- Preview image -->
+          </div>
+          <input type="file" id="photo-input" accept="image/*" class="hidden">
+          <button id="select-photo" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Pilih Foto Perangkat
+          </button>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+          <button id="close-modal-btn" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium">Batal</button>
+          <button id="save-photo" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">Simpan Foto</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Student Password Management Modal -->
     <div id="password-mgr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
       <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
@@ -571,11 +588,12 @@
       // Application State
       let students = [];
       let activities = [];
-      let currentUser = null; // { role: 'admin' | 'siswa', studentId?: number }
+      let currentUser = null; 
       let currentStudentId = null;
+      let activeFilter = 'all';
+      let activeRecapType = 'daily';
       let currentRecapData = null;
-      let currentRecapTitle = "";
-      let activeRecapType = "daily";
+      let currentRecapTitle = '';
 
       function getStoredCredentials() {
         try {
@@ -597,11 +615,9 @@
         if (creds[studentId]) {
           return creds[studentId];
         }
-        // Default PIN if never set
         return { pin: "123456", isPinSet: false };
       }
 
-      // Schedule rules
       function getSchoolSchedule(date) {
         const day = date.getDay();
         if (day === 5) { // Friday
@@ -756,14 +772,12 @@
           const cred = getStudentCredential(selectedId);
 
           if (!cred.isPinSet) {
-            // First time login - set this entered PIN as primary password
             saveStudentCredential(selectedId, enteredPin, true);
             alertBox.classList.add("hidden");
             currentUser = { role: "siswa", studentId: selectedId };
             document.getElementById("siswa-pin").value = "";
             switchView("siswa");
           } else {
-            // Check established password
             if (enteredPin === cred.pin) {
               alertBox.classList.add("hidden");
               currentUser = { role: "siswa", studentId: selectedId };
@@ -776,7 +790,6 @@
           }
         });
 
-        // Logout
         document.getElementById("logout-btn").addEventListener("click", () => {
           currentUser = null;
           switchView("login");
@@ -799,6 +812,7 @@
           sessionInfo.classList.remove("hidden");
           sessionInfo.classList.add("flex");
           userLabel.textContent = "Admin Pembina";
+          renderStudentFilterTabs();
           renderStudents();
           renderActivityLog();
         } else if (viewName === "siswa") {
@@ -815,6 +829,33 @@
         }
       }
 
+      function renderStudentFilterTabs() {
+        const tabsContainer = document.getElementById("student-list-tabs");
+        const counts = {
+          all: students.length,
+          present: students.filter(s => s.status === 'present').length,
+          absent: students.filter(s => s.status === 'absent').length,
+          permission: students.filter(s => s.status === 'permission').length,
+          sick: students.filter(s => s.status === 'sick').length
+        };
+
+        tabsContainer.innerHTML = `
+          <button class="tab px-3 py-2 text-xs sm:text-sm ${activeFilter === 'all' ? 'active font-semibold' : 'text-gray-500'}" data-filter="all">Semua (${counts.all})</button>
+          <button class="tab px-3 py-2 text-xs sm:text-sm ${activeFilter === 'present' ? 'active font-semibold' : 'text-gray-500'}" data-filter="present">Hadir (${counts.present})</button>
+          <button class="tab px-3 py-2 text-xs sm:text-sm ${activeFilter === 'absent' ? 'active font-semibold' : 'text-gray-500'}" data-filter="absent">Tidak Hadir (${counts.absent})</button>
+          <button class="tab px-3 py-2 text-xs sm:text-sm ${activeFilter === 'permission' ? 'active font-semibold' : 'text-gray-500'}" data-filter="permission">Izin (${counts.permission})</button>
+          <button class="tab px-3 py-2 text-xs sm:text-sm ${activeFilter === 'sick' ? 'active font-semibold' : 'text-gray-500'}" data-filter="sick">Sakit (${counts.sick})</button>
+        `;
+
+        tabsContainer.querySelectorAll("button").forEach(btn => {
+          btn.addEventListener("click", () => {
+            activeFilter = btn.dataset.filter;
+            renderStudentFilterTabs();
+            renderStudents();
+          });
+        });
+      }
+
       function renderStudents() {
         const studentList = document.getElementById("student-list");
         studentList.innerHTML = "";
@@ -822,6 +863,10 @@
 
         students.forEach((student) => {
           if (searchTerm && !student.name.toLowerCase().includes(searchTerm)) {
+            return;
+          }
+
+          if (activeFilter !== 'all' && student.status !== activeFilter) {
             return;
           }
 
@@ -914,6 +959,7 @@
 
         student.status = status;
         addActivity(student.name, status);
+        renderStudentFilterTabs();
         renderStudents();
         saveDataToLocalStorage();
       }
@@ -933,7 +979,10 @@
           addActivity(student.name, "check-in", student.checkInLate ? `Terlambat ${student.checkInLate}` : null);
           
           if (currentUser && currentUser.role === 'siswa') renderSiswaPortal();
-          else renderStudents();
+          else {
+            renderStudentFilterTabs();
+            renderStudents();
+          }
           
           saveDataToLocalStorage();
         }
@@ -953,7 +1002,10 @@
           addActivity(student.name, "check-out", student.checkOutEarly ? `Pulang cepat ${student.checkOutEarly}` : null);
 
           if (currentUser && currentUser.role === 'siswa') renderSiswaPortal();
-          else renderStudents();
+          else {
+            renderStudentFilterTabs();
+            renderStudents();
+          }
 
           saveDataToLocalStorage();
         }
@@ -1038,7 +1090,6 @@
           renderSiswaPortal();
         };
 
-        // Render Student Personal Activity
         const personalLog = document.getElementById("siswa-activity-log");
         const myActivities = activities.filter(a => a.studentName === student.name);
         personalLog.innerHTML = "";
@@ -1098,6 +1149,220 @@
         document.getElementById("sick-bar").style.width = `${Math.round((sickCount / totalCount) * 100)}%`;
       }
 
+      function setupRecapSystem() {
+        const recapTabs = document.querySelectorAll("#recap-tabs .tab");
+        const recapDatePicker = document.getElementById("recap-date-picker");
+        const generateBtn = document.getElementById("generate-recap-btn");
+
+        recapDatePicker.value = getFormattedDate(new Date());
+
+        recapTabs.forEach(tab => {
+          tab.addEventListener("click", () => {
+            recapTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            activeRecapType = tab.dataset.recap;
+          });
+        });
+
+        generateBtn.addEventListener("click", generateRecapData);
+
+        document.getElementById("download-recap-excel").addEventListener("click", exportRecapExcel);
+        document.getElementById("download-recap-pdf").addEventListener("click", exportRecapPDF);
+      }
+
+      function generateRecapData() {
+        const dateVal = document.getElementById("recap-date-picker").value;
+        if (!dateVal) return;
+
+        const actionsDiv = document.getElementById("recap-actions");
+        const recapTitle = document.getElementById("recap-title");
+
+        let recapData = [];
+        let title = "";
+
+        if (activeRecapType === "daily") {
+          title = `Rekap Harian (${dateVal})`;
+          const saved = loadDataForDate(dateVal);
+          const dayStudents = saved ? saved.students : (dateVal === getFormattedDate(new Date()) ? students : defaultStudents);
+          recapData = dayStudents.map(s => ({
+            name: s.name,
+            status: getStatusText(s.status),
+            checkIn: s.checkInTime || "-",
+            checkOut: s.checkOutTime || "-",
+            keterangan: s.checkInLate ? `Terlambat (${s.checkInLate})` : (s.checkOutEarly ? `Pulang cepat (${s.checkOutEarly})` : "-")
+          }));
+        } else if (activeRecapType === "weekly") {
+          const selectedDate = new Date(dateVal);
+          const dayOfWeek = selectedDate.getDay();
+          const monday = new Date(selectedDate);
+          monday.setDate(selectedDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+          
+          title = `Rekap Mingguan (${getFormattedDate(monday)} s/d ${getFormattedDate(new Date(monday.getTime() + 6 * 86400000))})`;
+          
+          recapData = defaultStudents.map(st => {
+            let hadirCount = 0, izinCount = 0, sakitCount = 0, alfaCount = 0;
+
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(monday);
+              d.setDate(monday.getDate() + i);
+              const dStr = getFormattedDate(d);
+              const saved = loadDataForDate(dStr);
+              if (saved) {
+                const match = saved.students.find(s => s.id === st.id);
+                if (match) {
+                  if (match.status === 'present') hadirCount++;
+                  else if (match.status === 'permission') izinCount++;
+                  else if (match.status === 'sick') sakitCount++;
+                  else if (match.status === 'absent') alfaCount++;
+                }
+              } else if (dStr === getFormattedDate(new Date())) {
+                const match = students.find(s => s.id === st.id);
+                if (match) {
+                  if (match.status === 'present') hadirCount++;
+                  else if (match.status === 'permission') izinCount++;
+                  else if (match.status === 'sick') sakitCount++;
+                  else if (match.status === 'absent') alfaCount++;
+                }
+              }
+            }
+            return {
+              name: st.name,
+              hadir: hadirCount,
+              izin: izinCount,
+              sakit: sakitCount,
+              alfa: alfaCount,
+              total: hadirCount + izinCount + sakitCount + alfaCount
+            };
+          });
+        } else {
+          const [year, month] = dateVal.split("-");
+          const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+          title = `Rekap Bulanan (${monthNames[parseInt(month) - 1]} ${year})`;
+
+          const daysInMonth = new Date(year, month, 0).getDate();
+          recapData = defaultStudents.map(st => {
+            let hadirCount = 0, izinCount = 0, sakitCount = 0, alfaCount = 0;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+              const dStr = `${year}-${month.padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+              const saved = loadDataForDate(dStr);
+              if (saved) {
+                const match = saved.students.find(s => s.id === st.id);
+                if (match) {
+                  if (match.status === 'present') hadirCount++;
+                  else if (match.status === 'permission') izinCount++;
+                  else if (match.status === 'sick') sakitCount++;
+                  else if (match.status === 'absent') alfaCount++;
+                }
+              } else if (dStr === getFormattedDate(new Date())) {
+                const match = students.find(s => s.id === st.id);
+                if (match) {
+                  if (match.status === 'present') hadirCount++;
+                  else if (match.status === 'permission') izinCount++;
+                  else if (match.status === 'sick') sakitCount++;
+                  else if (match.status === 'absent') alfaCount++;
+                }
+              }
+            }
+            return {
+              name: st.name,
+              hadir: hadirCount,
+              izin: izinCount,
+              sakit: sakitCount,
+              alfa: alfaCount,
+              total: hadirCount + izinCount + sakitCount + alfaCount
+            };
+          });
+        }
+
+        currentRecapData = recapData;
+        currentRecapTitle = title;
+        recapTitle.textContent = title;
+        actionsDiv.classList.remove("hidden");
+
+        renderRecapTable(recapData, activeRecapType);
+      }
+
+      function renderRecapTable(data, type) {
+        const container = document.getElementById("recap-content");
+        if (!data || data.length === 0) {
+          container.innerHTML = `<p class="text-center py-4 text-gray-400">Tidak ada data rekap.</p>`;
+          return;
+        }
+
+        if (type === "daily") {
+          let html = `
+            <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden border border-gray-200 text-xs sm:text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-600">No</th>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-600">Nama Siswa</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-600">Status</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-600">Jam Masuk</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-600">Jam Pulang</th>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-600">Catatan</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 bg-white">
+          `;
+          data.forEach((row, i) => {
+            html += `
+              <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-gray-500">${i + 1}</td>
+                <td class="px-3 py-2 font-medium text-gray-800">${row.name}</td>
+                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${getBadgeClass(row.status)}">${row.status}</span></td>
+                <td class="px-3 py-2 text-center text-gray-600 font-mono">${row.checkIn}</td>
+                <td class="px-3 py-2 text-center text-gray-600 font-mono">${row.checkOut}</td>
+                <td class="px-3 py-2 text-gray-500">${row.keterangan}</td>
+              </tr>
+            `;
+          });
+          html += `</tbody></table>`;
+          container.innerHTML = html;
+        } else {
+          let html = `
+            <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden border border-gray-200 text-xs sm:text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-600">No</th>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-600">Nama Siswa</th>
+                  <th class="px-3 py-2 text-center font-semibold text-green-600">Hadir</th>
+                  <th class="px-3 py-2 text-center font-semibold text-yellow-600">Izin</th>
+                  <th class="px-3 py-2 text-center font-semibold text-indigo-600">Sakit</th>
+                  <th class="px-3 py-2 text-center font-semibold text-red-600">Tidak Hadir</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-700">Total Sesi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 bg-white">
+          `;
+          data.forEach((row, i) => {
+            html += `
+              <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-gray-500">${i + 1}</td>
+                <td class="px-3 py-2 font-medium text-gray-800">${row.name}</td>
+                <td class="px-3 py-2 text-center font-semibold text-green-600">${row.hadir}</td>
+                <td class="px-3 py-2 text-center font-semibold text-yellow-600">${row.izin}</td>
+                <td class="px-3 py-2 text-center font-semibold text-indigo-600">${row.sakit}</td>
+                <td class="px-3 py-2 text-center font-semibold text-red-600">${row.alfa}</td>
+                <td class="px-3 py-2 text-center font-bold text-gray-800">${row.total}</td>
+              </tr>
+            `;
+          });
+          html += `</tbody></table>`;
+          container.innerHTML = html;
+        }
+      }
+
+      function getBadgeClass(status) {
+        switch (status) {
+          case 'Hadir': return 'bg-green-100 text-green-700';
+          case 'Tidak Hadir': return 'bg-red-100 text-red-700';
+          case 'Izin': return 'bg-yellow-100 text-yellow-700';
+          case 'Sakit': return 'bg-indigo-100 text-indigo-700';
+          default: return 'bg-gray-100 text-gray-700';
+        }
+      }
+
       function openPhotoModal(studentId) {
         currentStudentId = studentId;
         const student = students.find((s) => s.id === studentId);
@@ -1139,6 +1404,37 @@
         saveAsFile(doc.output("blob"), `Absensi_ROBOTIK_SMAN58_${getFormattedDate(new Date())}.pdf`);
       }
 
+      function exportRecapExcel() {
+        if (!currentRecapData) return;
+        const worksheet = XLSX.utils.json_to_sheet(currentRecapData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Absensi");
+        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        saveAsFile(new Blob([excelBuffer], { type: "application/octet-stream" }), `${currentRecapTitle.replace(/[^a-zA-Z0-0_]/g, "_")}.xlsx`);
+      }
+
+      function exportRecapPDF() {
+        if (!currentRecapData) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(14);
+        doc.text(currentRecapTitle, 105, 15, { align: "center" });
+
+        let tableColumn = [];
+        let tableRows = [];
+
+        if (activeRecapType === "daily") {
+          tableColumn = ["No", "Nama Siswa", "Status", "Jam Masuk", "Jam Pulang", "Catatan"];
+          tableRows = currentRecapData.map((r, i) => [i + 1, r.name, r.status, r.checkIn, r.checkOut, r.keterangan]);
+        } else {
+          tableColumn = ["No", "Nama Siswa", "Hadir", "Izin", "Sakit", "Tidak Hadir", "Total"];
+          tableRows = currentRecapData.map((r, i) => [i + 1, r.name, r.hadir, r.izin, r.sakit, r.alfa, r.total]);
+        }
+
+        doc.autoTable({ head: [tableColumn], body: tableRows, startY: 25, theme: "grid" });
+        saveAsFile(doc.output("blob"), `${currentRecapTitle.replace(/[^a-zA-Z0-0_]/g, "_")}.pdf`);
+      }
+
       function saveAsFile(blob, fileName) {
         const link = document.createElement("a");
         link.href = window.URL.createObjectURL(blob);
@@ -1147,13 +1443,13 @@
         window.URL.revokeObjectURL(link.href);
       }
 
-      // Initialize
       document.addEventListener("DOMContentLoaded", () => {
         loadDataFromLocalStorage();
         updateDateTime();
         setInterval(updateDateTime, 1000);
 
         setupAuthentication();
+        setupRecapSystem();
 
         document.getElementById("search-input").addEventListener("input", renderStudents);
         document.getElementById("download-excel").addEventListener("click", exportToExcel);
@@ -1188,6 +1484,7 @@
         });
 
         document.getElementById("close-modal").addEventListener("click", closePhotoModal);
+        document.getElementById("close-modal-btn").addEventListener("click", closePhotoModal);
         
         const mgrModal = document.getElementById("password-mgr-modal");
         const openMgrBtn = document.getElementById("open-password-mgr-btn");
@@ -1242,7 +1539,6 @@
             container.appendChild(row);
           });
 
-          // Attach handlers inside password list
           container.querySelectorAll(".toggle-pin-btn").forEach(btn => {
             btn.addEventListener("click", () => {
               const id = parseInt(btn.dataset.id);
@@ -1265,7 +1561,6 @@
               const student = students.find(s => s.id === id);
               const textToCopy = `PIN Login Absensi Robotik untuk ${student.name}: ${cred.pin}`;
               
-              // Copy logic using standard command
               const el = document.createElement('textarea');
               el.value = textToCopy;
               document.body.appendChild(el);
