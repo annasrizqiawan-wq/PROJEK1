@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistem Absensi Digital ROBOTIK SMAN 58</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: #f0f4f8;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+
+      .card {
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+
+      .student-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+      }
+
+      .student-card.present {
+        border-left-color: #10b981;
+        background-color: rgba(16, 185, 129, 0.05);
+      }
+
+      .student-card.absent {
+        border-left-color: #ef4444;
+        background-color: rgba(239, 68, 68, 0.05);
+      }
+
+      .student-card.permission {
+        border-left-color: #f59e0b;
+        background-color: rgba(245, 158, 11, 0.05);
+      }
+
+      .student-card.sick {
+        border-left-color: #6366f1;
+        background-color: rgba(99, 102, 241, 0.05);
+      }
+
+      .avatar-animation {
+        animation: pulse 1.5s ease-in-out;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.9; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      .btn {
+        transition: all 0.3s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+
+      .activity-item {
+        animation: fadeIn 0.5s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .tab.active {
+        border-bottom: 3px solid #2563eb;
+        color: #2563eb;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen flex flex-col">
+
+    <header class="header py-4 px-4 md:px-8 text-white sticky top-0 z-40">
+      <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+        <div class="text-center md:text-left flex items-center gap-3">
+          <div class="bg-white/20 p-2.5 rounded-xl backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold leading-tight">ROBOTIK SMAN 58</h1>
+            <p class="text-xs md:text-sm text-blue-200">Sistem Absensi Digital Terpadu</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="bg-white/10 rounded-lg px-3 py-1.5 text-center text-xs md:text-sm border border-white/10">
+            <div id="current-date" class="font-medium"></div>
+            <div id="current-time" class="font-bold text-yellow-300"></div>
+          </div>
+          <div id="user-session-info" class="hidden items-center gap-2 bg-blue-900/50 px-3 py-1.5 rounded-lg border border-blue-400/30">
+            <span id="logged-user-name" class="text-xs md:text-sm font-semibold"></span>
+            <button id="logout-btn" class="bg-red-500/80 hover:bg-red-600 text-white text-xs px-2.5 py-1 rounded-md transition-all flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Keluar
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- LOGIN SCREEN -->
+    <section id="login-view" class="flex-grow flex items-center justify-center px-4 py-8">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-gray-100">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800">Masuk Portal Absensi</h2>
+          <p class="text-sm text-gray-500">Pilih jenis akun untuk melanjutkan</p>
+        </div>
+
+        <!-- Role Toggle Tabs -->
+        <div class="flex rounded-xl bg-gray-100 p-1 mb-6">
+          <button id="tab-admin" class="w-1/2 py-2 text-sm font-semibold rounded-lg bg-white text-blue-600 shadow-sm transition-all">
+            Admin / Pembina
+          </button>
+          <button id="tab-siswa" class="w-1/2 py-2 text-sm font-semibold rounded-lg text-gray-600 transition-all">
+            Siswa / Anggota
+          </button>
+        </div>
+
+        <div id="login-alert" class="hidden mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded"></div>
+
+        <!-- Admin Login Form -->
+        <form id="admin-login-form" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Username Admin</label>
+            <input type="text" id="admin-username" placeholder="Masukkan Username Admin" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Password</label>
+            <div class="relative">
+              <input type="password" id="admin-password" placeholder="Masukkan Password" required class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm">
+              <button type="button" id="toggle-admin-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a8.959 8.959 0 013.122-.563c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-2.022 3.868M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-all">
+            Masuk Sebagai Admin
+          </button>
+        </form>
+
+        <!-- Siswa Login Form -->
+        <form id="siswa-login-form" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Pilih Nama Siswa</label>
+            <select id="siswa-select" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-white">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">PIN / Password</label>
+            <div class="relative">
+              <input type="password" id="siswa-pin" placeholder="Masukkan PIN / Password Anda" required class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+              <button type="button" id="toggle-siswa-pin" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a8.959 8.959 0 013.122-.563c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-2.022 3.868M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" />
+                </svg>
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1" id="siswa-pin-hint">Pertama kali masuk? PIN yang Anda ketik akan menjadi password utama Anda.</p>
+          </div>
+          <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-all">
+            Masuk Sebagai Siswa
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ADMIN DASHBOARD -->
+    <main id="admin-view" class="container mx-auto px-4 md:px-8 py-6 hidden flex-grow">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+          <div class="flex items-center">
+            <div class="rounded-xl bg-green-100 p-3 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Hadir</p>
+              <h3 class="text-2xl font-bold text-gray-800" id="present-count">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="card bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+          <div class="flex items-center">
+            <div class="rounded-xl bg-red-100 p-3 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Tidak Hadir</p>
+              <h3 class="text-2xl font-bold text-gray-800" id="absent-count">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="card bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+          <div class="flex items-center">
+            <div class="rounded-xl bg-yellow-100 p-3 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Izin</p>
+              <h3 class="text-2xl font-bold text-gray-800" id="permission-count">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="card bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+          <div class="flex items-center">
+            <div class="rounded-xl bg-indigo-100 p-3 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Sakit</p>
+              <h3 class="text-2xl font-bold text-gray-800" id="sick-count">0</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Student List -->
+        <div class="w-full lg:w-2/3">
+          <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+              <h2 class="text-lg font-bold text-gray-800">Daftar Siswa Hari Ini</h2>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button id="open-password-mgr-btn" class="btn bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-lg font-medium flex items-center gap-1 shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  Kelola Password Siswa
+                </button>
+                <div class="relative flex-grow sm:flex-grow-0">
+                  <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Cari siswa..."
+                    class="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                  />
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex mb-4 border-b text-sm flex-wrap" id="student-list-tabs">
+              <button class="tab active px-4 py-2 text-gray-600" data-filter="all">Semua (19)</button>
+            </div>
+
+            <div class="overflow-y-auto max-h-[500px] pr-2 space-y-3" id="student-list">
+              <!-- Dynamic Cards -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Log and Actions -->
+        <div class="w-full lg:w-1/3 space-y-6">
+          <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-base font-bold text-gray-800">Riwayat Aktivitas</h2>
+              <div class="flex space-x-2">
+                <button id="download-excel" class="btn flex items-center text-xs px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Excel
+                </button>
+                <button id="download-pdf" class="btn flex items-center text-xs px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  PDF
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-y-auto max-h-[250px] space-y-2" id="activity-log">
+              <div class="text-gray-400 text-center py-4 text-sm">Belum ada aktivitas</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <h2 class="text-base font-bold text-gray-800 mb-3">Statistik Kehadiran</h2>
+            <div class="space-y-3">
+              <div>
+                <div class="flex justify-between mb-1 text-xs font-medium text-gray-600">
+                  <span>Hadir</span>
+                  <span id="present-percent">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2">
+                  <div class="bg-green-500 h-2 rounded-full transition-all duration-500" id="present-bar" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1 text-xs font-medium text-gray-600">
+                  <span>Tidak Hadir</span>
+                  <span id="absent-percent">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2">
+                  <div class="bg-red-500 h-2 rounded-full transition-all duration-500" id="absent-bar" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1 text-xs font-medium text-gray-600">
+                  <span>Izin</span>
+                  <span id="permission-percent">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2">
+                  <div class="bg-yellow-500 h-2 rounded-full transition-all duration-500" id="permission-bar" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1 text-xs font-medium text-gray-600">
+                  <span>Sakit</span>
+                  <span id="sick-percent">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2">
+                  <div class="bg-indigo-500 h-2 rounded-full transition-all duration-500" id="sick-bar" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <h2 class="text-base font-bold text-gray-800 mb-3">Rekap Waktu</h2>
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Sudah Check-in</span>
+                <span class="font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full" id="checkin-count">0 siswa</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Sudah Check-out</span>
+                <span class="font-semibold text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full" id="checkout-count">0 siswa</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Masih di Sekolah</span>
+                <span class="font-semibold text-green-600 bg-green-50 px-2.5 py-0.5 rounded-full" id="inschool-count">0 siswa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Rekapitulasi Kehadiran</h2>
+        <div class="flex mb-4 border-b flex-wrap text-sm" id="recap-tabs">
+          <button class="tab active px-4 py-2 text-gray-600" data-recap="daily">Harian</button>
+          <button class="tab px-4 py-2 text-gray-600" data-recap="weekly">Mingguan</button>
+          <button class="tab px-4 py-2 text-gray-600" data-recap="monthly">Bulanan</button>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center gap-4 mb-4">
+          <input type="date" id="recap-date-picker" class="border border-gray-300 text-sm rounded-lg p-2.5 w-full sm:w-auto">
+          <button id="generate-recap-btn" class="btn bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 w-full sm:w-auto">
+            Tampilkan Rekap
+          </button>
+        </div>
+        <div id="recap-results">
+          <div id="recap-actions" class="hidden mb-4 flex items-center justify-between flex-wrap gap-4">
+            <h3 id="recap-title" class="text-base font-bold text-gray-800"></h3>
+            <div class="flex space-x-2">
+              <button id="download-recap-excel" class="btn flex items-center text-xs px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Excel
+              </button>
+              <button id="download-recap-pdf" class="btn flex items-center text-xs px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                PDF
+              </button>
+            </div>
+          </div>
+          <div id="recap-content" class="overflow-x-auto text-sm text-gray-500">
+            Pilih periode dan klik "Tampilkan Rekap" untuk melihat data.
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- SISWA PORTAL VIEW -->
+    <main id="siswa-view" class="container mx-auto px-4 md:px-8 py-6 hidden flex-grow">
+      <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Student Welcome Card -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div id="siswa-avatar-container" class="w-16 h-16 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center overflow-hidden">
+              <!-- Avatar -->
+            </div>
+            <div>
+              <p class="text-xs text-blue-200 uppercase tracking-wide font-medium">Selamat Datang,</p>
+              <h2 id="siswa-portal-name" class="text-2xl font-bold"></h2>
+              <p id="siswa-portal-status" class="text-xs bg-white/20 inline-block px-2.5 py-0.5 rounded-full mt-1"></p>
+            </div>
+          </div>
+          <div class="text-right flex sm:flex-col items-center sm:items-end gap-2">
+            <span class="text-xs text-blue-200">Jam Operasional:</span>
+            <span class="bg-white/20 text-xs px-3 py-1 rounded-lg font-mono">07:30 - 16:30 WIB</span>
+          </div>
+        </div>
+
+        <!-- Student Attendance Actions Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Absensi Hari Ini
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
+              <div>
+                <p class="text-xs text-gray-500 font-medium">Jam Masuk</p>
+                <p id="siswa-checkin-time" class="text-xl font-bold text-gray-800">-- : --</p>
+                <p id="siswa-checkin-late" class="text-xs text-red-500 font-medium mt-0.5"></p>
+              </div>
+              <button id="siswa-checkin-btn" class="btn px-4 py-2.5 bg-green-600 text-white font-semibold text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                Check-in
+              </button>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
+              <div>
+                <p class="text-xs text-gray-500 font-medium">Jam Pulang</p>
+                <p id="siswa-checkout-time" class="text-xl font-bold text-gray-800">-- : --</p>
+                <p id="siswa-checkout-early" class="text-xs text-orange-500 font-medium mt-0.5"></p>
+              </div>
+              <button id="siswa-checkout-btn" class="btn px-4 py-2.5 bg-red-600 text-white font-semibold text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                Check-out
+              </button>
+            </div>
+          </div>
+
+          <!-- Permission / Sick Request Buttons -->
+          <div class="pt-4 border-t border-gray-100 flex flex-wrap gap-3">
+            <button id="siswa-request-permission-btn" class="btn flex-1 py-2.5 px-4 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Ajukan Izin
+            </button>
+            <button id="siswa-request-sick-btn" class="btn flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Ajukan Sakit
+            </button>
+          </div>
+        </div>
+
+        <!-- Student Personal Activity Log -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">Riwayat Absensi Saya Hari Ini</h3>
+          <div id="siswa-activity-log" class="space-y-3">
+            <!-- Dynamic items -->
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Photo Upload Modal -->
+    <!-- Student Password Management Modal -->
+    <div id="password-mgr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2">
+            <div class="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">Kelola Password & PIN Siswa</h3>
+              <p class="text-xs text-gray-500">Lihat, beritahu, atau reset password login anggota robotik</p>
+            </div>
+          </div>
+          <button id="close-password-mgr" class="text-gray-400 hover:text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <input type="text" id="password-search-input" placeholder="Cari nama siswa..." class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div class="overflow-y-auto flex-grow space-y-2 pr-1" id="password-list-container">
+          <!-- Dynamically populated password rows -->
+        </div>
+
+        <div class="mt-4 pt-3 border-t text-right">
+          <button id="done-password-mgr" class="px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm font-medium transition-all">
+            Selesai
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-4 px-4 text-center text-xs text-gray-500 mt-auto">
+      &copy; 2026 Robotik SMAN 58 Jakarta. All rights reserved.
+    </footer>
+
+    <script>
+      // Default student list
+      const defaultStudents = [
+        { id: 1, name: "Annas Rizqiawan", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 2, name: "Fauzul Fatwalangit Winarko", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 3, name: "Yuan Faisal Hakim Hidayat", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 4, name: "Fadillah Yusuf", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 5, name: "Zoltan Rizqullah", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 6, name: "Murtaza Arfani", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 7, name: "Carlos Alberth Aubrey Saragih", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 8, name: "Satria wiratama", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 9, name: "Tristan achmad rusyidan", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 10, name: "Muhammad hafidz mardiansyah", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 11, name: "Muhammad Nizar Ardiansyah", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 12, name: "Aldaridzi zylent bessy", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 13, name: "Kenzie fawwaz suta", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 14, name: "Muhammad Fadillah Jailani", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 15, name: "Qonita Baiduri", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 16, name: "keanu abiyasa sudarmo", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 17, name: "Azka Izzati Fakhira", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 18, name: "Padma Nadia Chairunnisa", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null },
+        { id: 19, name: "Hilmi Azam", status: "", photo: null, checkInTime: null, checkOutTime: null, checkInLate: null, checkOutEarly: null }
+      ];
+
+      // Application State
+      let students = [];
+      let activities = [];
+      let currentUser = null; // { role: 'admin' | 'siswa', studentId?: number }
+      let currentStudentId = null;
+      let currentRecapData = null;
+      let currentRecapTitle = "";
+      let activeRecapType = "daily";
+
+      function getStoredCredentials() {
+        try {
+          const creds = localStorage.getItem("robotik_student_credentials");
+          return creds ? JSON.parse(creds) : {};
+        } catch(e) {
+          return {};
+        }
+      }
+
+      function saveStudentCredential(studentId, pin, isPinSet = true) {
+        const creds = getStoredCredentials();
+        creds[studentId] = { pin: pin, isPinSet: isPinSet };
+        localStorage.setItem("robotik_student_credentials", JSON.stringify(creds));
+      }
+
+      function getStudentCredential(studentId) {
+        const creds = getStoredCredentials();
+        if (creds[studentId]) {
+          return creds[studentId];
+        }
+        // Default PIN if never set
+        return { pin: "123456", isPinSet: false };
+      }
+
+      // Schedule rules
+      function getSchoolSchedule(date) {
+        const day = date.getDay();
+        if (day === 5) { // Friday
+          return { checkInTime: "07:30", checkOutTime: "11:30" };
+        }
+        return { checkInTime: "07:30", checkOutTime: "16:30" };
+      }
+
+      function getFormattedDate(date) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        const day = date.getDate().toString().padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function saveDataToLocalStorage() {
+        const todayStr = getFormattedDate(new Date());
+        localStorage.setItem(
+          `attendanceDataRobotik-${todayStr}`,
+          JSON.stringify({ students, activities, timestamp: new Date() })
+        );
+      }
+
+      function loadDataFromLocalStorage() {
+        const todayStr = getFormattedDate(new Date());
+        const data = localStorage.getItem(`attendanceDataRobotik-${todayStr}`);
+        if (data) {
+          const parsedData = JSON.parse(data);
+          const savedDate = new Date(parsedData.timestamp);
+          if (getFormattedDate(savedDate) === todayStr) {
+            students = parsedData.students;
+            activities = parsedData.activities || [];
+            return;
+          }
+        }
+        students = JSON.parse(JSON.stringify(defaultStudents));
+        activities = [];
+        saveDataToLocalStorage();
+      }
+
+      function loadDataForDate(dateStr) {
+        const data = localStorage.getItem(`attendanceDataRobotik-${dateStr}`);
+        return data ? JSON.parse(data) : null;
+      }
+
+      function updateDateTime() {
+        const now = new Date();
+        document.getElementById("current-date").textContent = now.toLocaleDateString("id-ID", {
+          weekday: "long", year: "numeric", month: "short", day: "numeric"
+        });
+        document.getElementById("current-time").textContent = now.toLocaleTimeString("id-ID", {
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+        });
+      }
+
+      function setupAuthentication() {
+        const tabAdmin = document.getElementById("tab-admin");
+        const tabSiswa = document.getElementById("tab-siswa");
+        const adminForm = document.getElementById("admin-login-form");
+        const siswaForm = document.getElementById("siswa-login-form");
+        const siswaSelect = document.getElementById("siswa-select");
+        const alertBox = document.getElementById("login-alert");
+
+        function setupPasswordToggle(inputId, buttonId) {
+          const input = document.getElementById(inputId);
+          const button = document.getElementById(buttonId);
+          if (!input || !button) return;
+
+          const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>`;
+          const eyeOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a8.959 8.959 0 013.122-.563c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-2.022 3.868M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" /></svg>`;
+
+          button.addEventListener("click", () => {
+            const isPassword = input.getAttribute("type") === "password";
+            input.setAttribute("type", isPassword ? "text" : "password");
+            button.innerHTML = isPassword ? eyeIcon : eyeOffIcon;
+          });
+        }
+
+        setupPasswordToggle("admin-password", "toggle-admin-password");
+        setupPasswordToggle("siswa-pin", "toggle-siswa-pin");
+
+        // Populate Siswa Dropdown
+        siswaSelect.innerHTML = students.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+
+        const updateSiswaHint = () => {
+          const selectedId = parseInt(siswaSelect.value);
+          const cred = getStudentCredential(selectedId);
+          const hintEl = document.getElementById("siswa-pin-hint");
+          if (cred.isPinSet) {
+            hintEl.textContent = "Masukkan PIN / Password yang telah Anda buat sebelumnya.";
+            hintEl.className = "text-xs text-blue-600 mt-1 font-medium";
+          } else {
+            hintEl.textContent = "Pertama kali masuk? Ketik PIN baru, PIN ini akan ditetapkan sebagai password tetap Anda.";
+            hintEl.className = "text-xs text-emerald-600 mt-1 font-medium";
+          }
+        };
+
+        siswaSelect.addEventListener("change", updateSiswaHint);
+        updateSiswaHint();
+
+        tabAdmin.addEventListener("click", () => {
+          tabAdmin.classList.add("bg-white", "text-blue-600", "shadow-sm");
+          tabAdmin.classList.remove("text-gray-600");
+          tabSiswa.classList.remove("bg-white", "text-blue-600", "shadow-sm");
+          tabSiswa.classList.add("text-gray-600");
+          adminForm.classList.remove("hidden");
+          siswaForm.classList.add("hidden");
+          alertBox.classList.add("hidden");
+        });
+
+        tabSiswa.addEventListener("click", () => {
+          tabSiswa.classList.add("bg-white", "text-blue-600", "shadow-sm");
+          tabSiswa.classList.remove("text-gray-600");
+          tabAdmin.classList.remove("bg-white", "text-blue-600", "shadow-sm");
+          tabAdmin.classList.add("text-gray-600");
+          siswaForm.classList.remove("hidden");
+          adminForm.classList.add("hidden");
+          alertBox.classList.add("hidden");
+          updateSiswaHint();
+        });
+
+        // Admin Submit
+        adminForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const usn = document.getElementById("admin-username").value.trim();
+          const pwd = document.getElementById("admin-password").value.trim();
+
+          if (usn === "AdminRobotik" && pwd === "#admin1234") {
+            currentUser = { role: "admin" };
+            alertBox.classList.add("hidden");
+            switchView("admin");
+            document.getElementById("admin-username").value = "";
+            document.getElementById("admin-password").value = "";
+          } else {
+            alertBox.textContent = "Username atau Password Admin tidak valid!";
+            alertBox.classList.remove("hidden");
+          }
+        });
+
+        // Siswa Submit
+        siswaForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const selectedId = parseInt(siswaSelect.value);
+          const enteredPin = document.getElementById("siswa-pin").value.trim();
+
+          if (!enteredPin) {
+            alertBox.textContent = "Harap masukkan PIN / Password terlebih dahulu!";
+            alertBox.classList.remove("hidden");
+            return;
+          }
+
+          const cred = getStudentCredential(selectedId);
+
+          if (!cred.isPinSet) {
+            // First time login - set this entered PIN as primary password
+            saveStudentCredential(selectedId, enteredPin, true);
+            alertBox.classList.add("hidden");
+            currentUser = { role: "siswa", studentId: selectedId };
+            document.getElementById("siswa-pin").value = "";
+            switchView("siswa");
+          } else {
+            // Check established password
+            if (enteredPin === cred.pin) {
+              alertBox.classList.add("hidden");
+              currentUser = { role: "siswa", studentId: selectedId };
+              document.getElementById("siswa-pin").value = "";
+              switchView("siswa");
+            } else {
+              alertBox.textContent = "PIN / Password salah! Minta Admin / Pembina untuk me-reset password jika Anda lupa.";
+              alertBox.classList.remove("hidden");
+            }
+          }
+        });
+
+        // Logout
+        document.getElementById("logout-btn").addEventListener("click", () => {
+          currentUser = null;
+          switchView("login");
+        });
+      }
+
+      function switchView(viewName) {
+        const loginView = document.getElementById("login-view");
+        const adminView = document.getElementById("admin-view");
+        const siswaView = document.getElementById("siswa-view");
+        const sessionInfo = document.getElementById("user-session-info");
+        const userLabel = document.getElementById("logged-user-name");
+
+        loginView.classList.add("hidden");
+        adminView.classList.add("hidden");
+        siswaView.classList.add("hidden");
+
+        if (viewName === "admin") {
+          adminView.classList.remove("hidden");
+          sessionInfo.classList.remove("hidden");
+          sessionInfo.classList.add("flex");
+          userLabel.textContent = "Admin Pembina";
+          renderStudents();
+          renderActivityLog();
+        } else if (viewName === "siswa") {
+          siswaView.classList.remove("hidden");
+          sessionInfo.classList.remove("hidden");
+          sessionInfo.classList.add("flex");
+          const student = students.find(s => s.id === currentUser.studentId);
+          userLabel.textContent = student ? student.name : "Siswa";
+          renderSiswaPortal();
+        } else {
+          loginView.classList.remove("hidden");
+          sessionInfo.classList.add("hidden");
+          sessionInfo.classList.remove("flex");
+        }
+      }
+
+      function renderStudents() {
+        const studentList = document.getElementById("student-list");
+        studentList.innerHTML = "";
+        const searchTerm = document.getElementById("search-input").value.toLowerCase();
+
+        students.forEach((student) => {
+          if (searchTerm && !student.name.toLowerCase().includes(searchTerm)) {
+            return;
+          }
+
+          const card = document.createElement("div");
+          let cardClasses = `student-card p-3 rounded-xl bg-white shadow-sm flex items-center justify-between flex-wrap gap-2 border border-gray-100 ${student.status || ''}`;
+          card.className = cardClasses;
+
+          let avatarContent = student.photo
+            ? `<img src="${student.photo}" alt="${student.name}" class="w-full h-full object-cover">`
+            : `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>`;
+
+          card.innerHTML = `
+            <div class="flex items-center flex-grow">
+                <div class="avatar w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden mr-3">
+                    ${avatarContent}
+                </div>
+                <div>
+                    <h3 class="font-semibold text-sm text-gray-800">${student.name}</h3>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex flex-col text-center">
+                    <button class="checkin-btn px-2.5 py-1 rounded-md bg-green-50 hover:bg-green-100 text-xs font-medium text-green-700 ${student.checkInTime ? "opacity-50 cursor-not-allowed" : ""}" data-id="${student.id}" ${student.checkInTime ? "disabled" : ""}>
+                      ${student.checkInTime ? student.checkInTime : "Masuk"}
+                    </button>
+                </div>
+                <div class="flex flex-col text-center">
+                    <button class="checkout-btn px-2.5 py-1 rounded-md bg-red-50 hover:bg-red-100 text-xs font-medium text-red-700 ${!student.checkInTime || student.checkOutTime ? "opacity-50 cursor-not-allowed" : ""}" data-id="${student.id}" ${!student.checkInTime || student.checkOutTime ? "disabled" : ""}>
+                      ${student.checkOutTime ? student.checkOutTime : "Pulang"}
+                    </button>
+                </div>
+                <button class="photo-upload-btn p-1.5 rounded-lg hover:bg-gray-100 text-blue-600" data-id="${student.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+                <div class="relative">
+                    <button class="status-btn p-1.5 rounded-lg hover:bg-gray-100 text-gray-500" data-id="${student.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+                    </button>
+                    <div class="status-dropdown absolute right-0 mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-100 hidden z-20">
+                        <div class="py-1">
+                            <button class="status-option block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" data-status="present" data-id="${student.id}">Hadir</button>
+                            <button class="status-option block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" data-status="absent" data-id="${student.id}">Tidak Hadir</button>
+                            <button class="status-option block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" data-status="permission" data-id="${student.id}">Izin</button>
+                            <button class="status-option block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" data-status="sick" data-id="${student.id}">Sakit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+          studentList.appendChild(card);
+        });
+
+        attachCardEventListeners();
+        updateCounters();
+      }
+
+      function attachCardEventListeners() {
+        document.querySelectorAll(".status-btn").forEach((btn) => {
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            document.querySelectorAll(".status-dropdown").forEach((d) => {
+              if (d !== this.nextElementSibling) d.classList.add("hidden");
+            });
+            this.nextElementSibling.classList.toggle("hidden");
+          });
+        });
+
+        document.querySelectorAll(".status-option").forEach((option) => {
+          option.addEventListener("click", function () {
+            updateStudentStatus(parseInt(this.dataset.id), this.dataset.status);
+            this.closest(".status-dropdown").classList.add("hidden");
+          });
+        });
+
+        document.querySelectorAll(".photo-upload-btn").forEach((btn) => {
+          btn.addEventListener("click", () => openPhotoModal(parseInt(btn.dataset.id)));
+        });
+
+        document.querySelectorAll(".checkin-btn").forEach((btn) => {
+          btn.addEventListener("click", () => checkIn(parseInt(btn.dataset.id)));
+        });
+
+        document.querySelectorAll(".checkout-btn").forEach((btn) => {
+          btn.addEventListener("click", () => checkOut(parseInt(btn.dataset.id)));
+        });
+      }
+
+      function updateStudentStatus(studentId, status) {
+        const student = students.find((s) => s.id === studentId);
+        if (!student) return;
+
+        student.status = status;
+        addActivity(student.name, status);
+        renderStudents();
+        saveDataToLocalStorage();
+      }
+
+      function checkIn(studentId) {
+        const student = students.find((s) => s.id === studentId);
+        if (student && !student.checkInTime) {
+          const now = new Date();
+          const schedule = getSchoolSchedule(now);
+          const timeString = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+          student.checkInTime = timeString;
+          if (!student.status) student.status = "present";
+
+          const minutesDiff = calculateTimeDifference(schedule.checkInTime, `${now.getHours()}:${now.getMinutes().toString().padStart(2, "0")}`);
+          if (minutesDiff > 0) student.checkInLate = formatMinutes(minutesDiff);
+
+          addActivity(student.name, "check-in", student.checkInLate ? `Terlambat ${student.checkInLate}` : null);
+          
+          if (currentUser && currentUser.role === 'siswa') renderSiswaPortal();
+          else renderStudents();
+          
+          saveDataToLocalStorage();
+        }
+      }
+
+      function checkOut(studentId) {
+        const student = students.find((s) => s.id === studentId);
+        if (student && student.checkInTime && !student.checkOutTime) {
+          const now = new Date();
+          const schedule = getSchoolSchedule(now);
+          const timeString = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+          student.checkOutTime = timeString;
+
+          const minutesDiff = calculateTimeDifference(`${now.getHours()}:${now.getMinutes().toString().padStart(2, "0")}`, schedule.checkOutTime);
+          if (minutesDiff > 0) student.checkOutEarly = formatMinutes(minutesDiff);
+
+          addActivity(student.name, "check-out", student.checkOutEarly ? `Pulang cepat ${student.checkOutEarly}` : null);
+
+          if (currentUser && currentUser.role === 'siswa') renderSiswaPortal();
+          else renderStudents();
+
+          saveDataToLocalStorage();
+        }
+      }
+
+      function calculateTimeDifference(time1, time2) {
+        const [h1, m1] = time1.split(":").map(Number);
+        const [h2, m2] = time2.split(":").map(Number);
+        return h2 * 60 + m2 - (h1 * 60 + m1);
+      }
+
+      function formatMinutes(minutes) {
+        if (minutes < 60) return `${minutes} menit`;
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m === 0 ? `${h} jam` : `${h} jam ${m} menit`;
+      }
+
+      function addActivity(studentName, status, details = null) {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        activities.unshift({ time: timeString, studentName, status, details, timestamp: now });
+        renderActivityLog();
+      }
+
+      function renderActivityLog() {
+        const activityLog = document.getElementById("activity-log");
+        activityLog.innerHTML = "";
+        if (activities.length === 0) {
+          activityLog.innerHTML = `<div class="text-gray-400 text-center py-4 text-xs">Belum ada aktivitas</div>`;
+          return;
+        }
+
+        activities.forEach((activity) => {
+          const activityItem = document.createElement("div");
+          activityItem.className = "activity-item flex items-center p-2 rounded-lg bg-gray-50 border border-gray-100 text-xs";
+          activityItem.innerHTML = `
+            <div class="w-12 text-gray-400 font-mono">${activity.time}</div>
+            <div class="flex-1 ml-2">
+                <p class="font-semibold text-gray-800">${activity.studentName}</p>
+                <p class="text-gray-500">${getStatusText(activity.status)}</p>
+                ${activity.details ? `<p class="text-red-500 font-medium">${activity.details}</p>` : ''}
+            </div>`;
+          activityLog.appendChild(activityItem);
+        });
+      }
+
+      function renderSiswaPortal() {
+        if (!currentUser || currentUser.role !== 'siswa') return;
+        const student = students.find(s => s.id === currentUser.studentId);
+        if (!student) return;
+
+        document.getElementById("siswa-portal-name").textContent = student.name;
+        document.getElementById("siswa-portal-status").textContent = `Status: ${getStatusText(student.status || 'Belum Diabsen')}`;
+
+        const avatarContainer = document.getElementById("siswa-avatar-container");
+        avatarContainer.innerHTML = student.photo
+          ? `<img src="${student.photo}" class="w-full h-full object-cover">`
+          : `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>`;
+
+        document.getElementById("siswa-checkin-time").textContent = student.checkInTime || "-- : --";
+        document.getElementById("siswa-checkin-late").textContent = student.checkInLate ? `Terlambat ${student.checkInLate}` : "";
+        document.getElementById("siswa-checkout-time").textContent = student.checkOutTime || "-- : --";
+        document.getElementById("siswa-checkout-early").textContent = student.checkOutEarly ? `Pulang cepat ${student.checkOutEarly}` : "";
+
+        const checkinBtn = document.getElementById("siswa-checkin-btn");
+        const checkoutBtn = document.getElementById("siswa-checkout-btn");
+
+        checkinBtn.disabled = !!student.checkInTime;
+        checkoutBtn.disabled = !student.checkInTime || !!student.checkOutTime;
+
+        checkinBtn.onclick = () => checkIn(student.id);
+        checkoutBtn.onclick = () => checkOut(student.id);
+
+        document.getElementById("siswa-request-permission-btn").onclick = () => {
+          updateStudentStatus(student.id, "permission");
+          renderSiswaPortal();
+        };
+
+        document.getElementById("siswa-request-sick-btn").onclick = () => {
+          updateStudentStatus(student.id, "sick");
+          renderSiswaPortal();
+        };
+
+        // Render Student Personal Activity
+        const personalLog = document.getElementById("siswa-activity-log");
+        const myActivities = activities.filter(a => a.studentName === student.name);
+        personalLog.innerHTML = "";
+        if (myActivities.length === 0) {
+          personalLog.innerHTML = `<p class="text-sm text-gray-400">Belum ada riwayat aktivitas hari ini.</p>`;
+        } else {
+          myActivities.forEach(a => {
+            personalLog.innerHTML += `
+              <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center text-sm">
+                <div>
+                  <p class="font-semibold text-gray-800">${getStatusText(a.status)}</p>
+                  ${a.details ? `<p class="text-xs text-orange-500">${a.details}</p>` : ''}
+                </div>
+                <span class="text-xs text-gray-400 font-mono">${a.time}</span>
+              </div>
+            `;
+          });
+        }
+      }
+
+      function getStatusText(status) {
+        const map = {
+          present: "Hadir", absent: "Tidak Hadir", permission: "Izin", sick: "Sakit",
+          "check-in": "Jam Masuk", "check-out": "Jam Pulang", photo: "Foto diperbarui"
+        };
+        return map[status] || "Belum Diabsen";
+      }
+
+      function updateCounters() {
+        const presentCount = students.filter((s) => s.status === "present").length;
+        const absentCount = students.filter((s) => s.status === "absent").length;
+        const permissionCount = students.filter((s) => s.status === "permission").length;
+        const sickCount = students.filter((s) => s.status === "sick").length;
+        const totalCount = students.length || 1;
+
+        document.getElementById("present-count").textContent = presentCount;
+        document.getElementById("absent-count").textContent = absentCount;
+        document.getElementById("permission-count").textContent = permissionCount;
+        document.getElementById("sick-count").textContent = sickCount;
+
+        const checkinCount = students.filter((s) => s.checkInTime).length;
+        const checkoutCount = students.filter((s) => s.checkOutTime).length;
+        const inSchoolCount = students.filter((s) => s.checkInTime && !s.checkOutTime).length;
+
+        document.getElementById("checkin-count").textContent = `${checkinCount} siswa`;
+        document.getElementById("checkout-count").textContent = `${checkoutCount} siswa`;
+        document.getElementById("inschool-count").textContent = `${inSchoolCount} siswa`;
+
+        document.getElementById("present-percent").textContent = `${Math.round((presentCount / totalCount) * 100)}%`;
+        document.getElementById("absent-percent").textContent = `${Math.round((absentCount / totalCount) * 100)}%`;
+        document.getElementById("permission-percent").textContent = `${Math.round((permissionCount / totalCount) * 100)}%`;
+        document.getElementById("sick-percent").textContent = `${Math.round((sickCount / totalCount) * 100)}%`;
+
+        document.getElementById("present-bar").style.width = `${Math.round((presentCount / totalCount) * 100)}%`;
+        document.getElementById("absent-bar").style.width = `${Math.round((absentCount / totalCount) * 100)}%`;
+        document.getElementById("permission-bar").style.width = `${Math.round((permissionCount / totalCount) * 100)}%`;
+        document.getElementById("sick-bar").style.width = `${Math.round((sickCount / totalCount) * 100)}%`;
+      }
+
+      function openPhotoModal(studentId) {
+        currentStudentId = studentId;
+        const student = students.find((s) => s.id === studentId);
+        document.getElementById("modal-title").textContent = `Unggah Foto: ${student.name}`;
+        document.getElementById("photo-preview").innerHTML = student.photo
+          ? `<img src="${student.photo}" class="w-full h-full object-cover">`
+          : `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>`;
+        document.getElementById("photo-modal").classList.remove("hidden");
+      }
+
+      function closePhotoModal() {
+        document.getElementById("photo-modal").classList.add("hidden");
+        currentStudentId = null;
+        document.getElementById("photo-input").value = "";
+      }
+
+      function exportToExcel() {
+        const data = students.map((s) => ({
+          Nama: s.name, Status: getStatusText(s.status), "Jam Masuk": s.checkInTime || "-",
+          Keterlambatan: s.checkInLate || "-", "Jam Pulang": s.checkOutTime || "-", "Pulang Cepat": s.checkOutEarly || "-"
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Absensi Harian");
+        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        saveAsFile(new Blob([excelBuffer], { type: "application/octet-stream" }), `Absensi_ROBOTIK_SMAN58_${getFormattedDate(new Date())}.xlsx`);
+      }
+
+      function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text("Absensi Digital ROBOTIK SMAN 58", 105, 15, { align: "center" });
+
+        const tableColumn = ["No", "Nama", "Status", "Jam Masuk", "Jam Pulang"];
+        const tableRows = students.map((s, i) => [i + 1, s.name, getStatusText(s.status), s.checkInTime || "-", s.checkOutTime || "-"]);
+
+        doc.autoTable({ head: [tableColumn], body: tableRows, startY: 25, theme: "grid" });
+        saveAsFile(doc.output("blob"), `Absensi_ROBOTIK_SMAN58_${getFormattedDate(new Date())}.pdf`);
+      }
+
+      function saveAsFile(blob, fileName) {
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", () => {
+        loadDataFromLocalStorage();
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        setupAuthentication();
+
+        document.getElementById("search-input").addEventListener("input", renderStudents);
+        document.getElementById("download-excel").addEventListener("click", exportToExcel);
+        document.getElementById("download-pdf").addEventListener("click", exportToPDF);
+
+        document.getElementById("select-photo").addEventListener("click", () => document.getElementById("photo-input").click());
+        document.getElementById("photo-input").addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => document.getElementById("photo-preview").innerHTML = `<img src="${evt.target.result}" class="w-full h-full object-cover">`;
+            reader.readAsDataURL(file);
+          }
+        });
+
+        document.getElementById("save-photo").addEventListener("click", () => {
+          const input = document.getElementById("photo-input");
+          if (currentStudentId && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const student = students.find((s) => s.id === currentStudentId);
+              student.photo = e.target.result;
+              addActivity(student.name, "photo");
+              renderStudents();
+              closePhotoModal();
+              saveDataToLocalStorage();
+            };
+            reader.readAsDataURL(input.files[0]);
+          } else {
+            closePhotoModal();
+          }
+        });
+
+        document.getElementById("close-modal").addEventListener("click", closePhotoModal);
+        
+        const mgrModal = document.getElementById("password-mgr-modal");
+        const openMgrBtn = document.getElementById("open-password-mgr-btn");
+        const closeMgrBtn = document.getElementById("close-password-mgr");
+        const doneMgrBtn = document.getElementById("done-password-mgr");
+        const passwordSearch = document.getElementById("password-search-input");
+
+        function renderPasswordManagerList() {
+          const container = document.getElementById("password-list-container");
+          container.innerHTML = "";
+          const filterText = passwordSearch.value.toLowerCase();
+
+          students.forEach((s) => {
+            if (filterText && !s.name.toLowerCase().includes(filterText)) return;
+
+            const cred = getStudentCredential(s.id);
+            const row = document.createElement("div");
+            row.className = "p-3 bg-gray-50 hover:bg-indigo-50/50 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all";
+
+            row.innerHTML = `
+              <div class="flex-1">
+                <p class="font-bold text-sm text-gray-800">${s.name}</p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-xs px-2 py-0.5 rounded ${cred.isPinSet ? 'bg-green-100 text-green-700 font-medium' : 'bg-yellow-100 text-yellow-700'}">
+                    ${cred.isPinSet ? 'Password Aktif' : 'Password Default'}
+                  </span>
+                  <span class="text-xs font-mono bg-white px-2 py-0.5 border rounded text-gray-700 font-semibold" id="pin-display-${s.id}">
+                    ••••••
+                  </span>
+                  <button class="toggle-pin-btn text-xs text-indigo-600 hover:underline font-medium" data-id="${s.id}">Tampilkan</button>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="copy-pin-btn px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-semibold flex items-center gap-1" data-id="${s.id}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Salin PIN
+                </button>
+                <button class="reset-pin-btn px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg text-xs font-semibold flex items-center gap-1" data-id="${s.id}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reset PIN
+                </button>
+                <button class="edit-pin-btn px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-semibold flex items-center gap-1" data-id="${s.id}">
+                  Ubah
+                </button>
+              </div>
+            `;
+
+            container.appendChild(row);
+          });
+
+          // Attach handlers inside password list
+          container.querySelectorAll(".toggle-pin-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const id = parseInt(btn.dataset.id);
+              const cred = getStudentCredential(id);
+              const display = document.getElementById(`pin-display-${id}`);
+              if (display.textContent.trim() === "••••••") {
+                display.textContent = cred.pin;
+                btn.textContent = "Sembunyikan";
+              } else {
+                display.textContent = "••••••";
+                btn.textContent = "Tampilkan";
+              }
+            });
+          });
+
+          container.querySelectorAll(".copy-pin-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const id = parseInt(btn.dataset.id);
+              const cred = getStudentCredential(id);
+              const student = students.find(s => s.id === id);
+              const textToCopy = `PIN Login Absensi Robotik untuk ${student.name}: ${cred.pin}`;
+              
+              // Copy logic using standard command
+              const el = document.createElement('textarea');
+              el.value = textToCopy;
+              document.body.appendChild(el);
+              el.select();
+              document.execCommand('copy');
+              document.body.removeChild(el);
+
+              btn.textContent = "Tersalin!";
+              setTimeout(() => btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Salin PIN`, 2000);
+            });
+          });
+
+          container.querySelectorAll(".reset-pin-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const id = parseInt(btn.dataset.id);
+              saveStudentCredential(id, "123456", false);
+              renderPasswordManagerList();
+            });
+          });
+
+          container.querySelectorAll(".edit-pin-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const id = parseInt(btn.dataset.id);
+              const cred = getStudentCredential(id);
+              const newPin = prompt(`Masukkan PIN / Password baru untuk siswa ini:`, cred.pin);
+              if (newPin && newPin.trim() !== "") {
+                saveStudentCredential(id, newPin.trim(), true);
+                renderPasswordManagerList();
+              }
+            });
+          });
+        }
+
+        if (openMgrBtn) {
+          openMgrBtn.addEventListener("click", () => {
+            renderPasswordManagerList();
+            mgrModal.classList.remove("hidden");
+          });
+        }
+
+        closeMgrBtn.addEventListener("click", () => mgrModal.classList.add("hidden"));
+        doneMgrBtn.addEventListener("click", () => mgrModal.classList.add("hidden"));
+        passwordSearch.addEventListener("input", renderPasswordManagerList);
+
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest(".status-btn") && !e.target.closest(".status-dropdown")) {
+            document.querySelectorAll(".status-dropdown").forEach((d) => d.classList.add("hidden"));
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
